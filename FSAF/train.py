@@ -10,17 +10,17 @@ def train(model, datasets, optimizer, criterion1, criterion2, device):
     model.train()
     total_loss = 0
     count = 0
-    total = len(data.train_coco)
+    total = len(datasets.train_coco)
     curr = 0
     while not datasets.train_end:
         inputs, ground, category, boxes = datasets.train_get_batch()
-        curr += inputs.shape(0)
-        inputs.to(device)
-        ground.to(device)
-        category.to(device)
-        boxes.to(device)
+        curr += inputs.shape[0]
+        inputs = inputs.to(device)
+        ground = ground.to(device)
+        category = category.to(device)
+        boxes = boxes.to(device)
         optimizer.zero_grad()
-        c1, c2, c3, c4, r1, r2, r3, r4 = Net(inputs)
+        c1, c2, c3, c4, r1, r2, r3, r4 = model(inputs)
         category = category[ground,:]
         boxes = boxes[ground,:]
         c1 = c1[ground,:]
@@ -35,6 +35,7 @@ def train(model, datasets, optimizer, criterion1, criterion2, device):
         loss2 = criterion1(c2, category) + criterion2(r2, boxes)
         loss3 = criterion1(c3, category) + criterion2(r3, boxes)
         loss4 = criterion1(c4, category) + criterion2(r4, boxes)
+        #print(loss1.mean(), loss2.mean(), loss3.mean(), loss4.mean())
         loss = torch.min(loss1, loss2)
         loss = torch.min(loss, loss3)
         loss = torch.min(loss, loss4)
@@ -52,13 +53,13 @@ def valid(model, datasets, criterion1, criterion2, device):
     count = 0
     while not datasets.valid_end:
         inputs, ground, category, boxes = datasets.valid_get_batch()
-        inputs.to(device)
-        ground.to(device)
-        category.to(device)
-        boxes.to(device)
-        c1, c2, c3, c4, r1, r2, r3, r4 = Net(inputs)
         category = category[ground,:]
         boxes = boxes[ground,:]
+        inputs = inputs.to(device)
+        ground = ground.to(device)
+        category = category.to(device)
+        boxes = boxes.to(device)
+        c1, c2, c3, c4, r1, r2, r3, r4 = model(inputs)
         c1 = c1[ground,:]
         c2 = c2[ground,:]
         c3 = c3[ground,:]
@@ -80,18 +81,18 @@ def valid(model, datasets, criterion1, criterion2, device):
 
 
 if __name__ == "__main__":
-    os.environ['CUDA_VISIBLE_DEVICES'] = "0"
+    os.environ['CUDA_VISIBLE_DEVICES'] = "2"
     num_epochs = 20
     device = torch.device("cuda:0" if torch.cuda.is_available() else "cpu")
     model = Net()
-    model.to(device)
+    model = model.to(device)
     lr = 0.001
-    datasets = CocoDatasets()
-    optimizer = optim.Adam(model.parameters, lr=lr)
+    batch_size = 2
+    datasets = CocoDatasets(batch_size=batch_size)
+    optimizer = optim.Adam(model.parameters(), lr=lr)
 
     criterion1 = FocalLoss(alpha=0.25)
     criterion2 = IoULoss()
-
     lowest_loss = 1e10
 
     for i in range(num_epochs):

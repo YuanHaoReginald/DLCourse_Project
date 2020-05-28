@@ -11,7 +11,7 @@ class fsaf(nn.Module):
         self.bn2 = nn.BatchNorm2d(256)
         self.conv3 = nn.Conv2d(256, 256, 3, padding=1)
         self.bn3 = nn.BatchNorm2d(256)
-        self.conv4 = nn.Conv2d(256, 256, 3, 1)
+        self.conv4 = nn.Conv2d(256, 256, 3, padding=1)
         self.bn4 = nn.BatchNorm2d(256)
         self.class_conv = nn.Conv2d(256, 91, 1)
         self.regress_conv = nn.Conv2d(256, 4, 1)
@@ -30,7 +30,7 @@ class fsaf(nn.Module):
         x = F.relu(x)
         class_output = self.class_conv(x)
         class_output = F.softmax(class_output, dim=1)
-        class_output.permute(0, 2, 3, 1)
-        regress_output = self.regress_conv(x)
-        regress_output.permute(0, 2, 3, 1)
+        class_output = class_output.permute(0, 2, 3, 1)
+        regress_output = self.regress_conv(x) * 256
+        regress_output = regress_output.permute(0, 2, 3, 1)
         return class_output, regress_output

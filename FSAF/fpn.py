@@ -16,6 +16,8 @@ class FPN(nn.Module):
         self.conv4 = nn.Conv2d(256, 256, 1)
         self.bn4 = nn.BatchNorm2d(256)
     def forward(self, inputs):
+        w = inputs.shape[2]
+        h = inputs.shape[3]
         x = self.features_model.conv1(inputs)
         x = self.features_model.bn1(x)
         x = self.features_model.relu(x)
@@ -38,9 +40,9 @@ class FPN(nn.Module):
         p4 = self.conv4(c1)
         p4 - self.bn4(p4)
         p4 = F.relu(p4)
-        p3 = p3 + F.interpolate(p3, scale_factor=2)
-        p1 = F.interpolate(p1, size=(256, 256))
-        p2 = F.interpolate(p2, size=(256, 256))
-        p3 = F.interpolate(p3, size=(256, 256))
-        p4 = F.interpolate(p4, size=(256, 256))
+        p4 = p4 + F.interpolate(p3, scale_factor=2)
+        p1 = F.interpolate(p1, size=(w, h))
+        p2 = F.interpolate(p2, size=(w, h))
+        p3 = F.interpolate(p3, size=(w, h))
+        p4 = F.interpolate(p4, size=(w, h))
         return p1, p2, p3, p4

@@ -8,7 +8,7 @@ class Net(nn.Module):
         self.fpn = FPN()
         self.fsaf = fsaf()
     def forward(self, inputs):
-        p1, p2, p3, p4 = self.FPN(inputs)
+        p1, p2, p3, p4 = self.fpn(inputs)
         c1, r1 = self.fsaf(p1)
         c2, r2 = self.fsaf(p2)
         c3, r3 = self.fsaf(p3)
