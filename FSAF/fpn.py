@@ -6,43 +6,50 @@ import torchvision
 class FPN(nn.Module):
     def __init__(self):
         super(FPN, self).__init__()
-        self.features_model = torchvision.models.resnet50(pretrained=True)
-        self.conv1 = nn.Conv2d(2048, 256, 1)
-        self.bn1 = nn.BatchNorm2d(256)
-        self.conv2 = nn.Conv2d(1024, 256, 1)
-        self.bn2 = nn.BatchNorm2d(256)
-        self.conv3 = nn.Conv2d(512, 256, 1)
-        self.bn3 = nn.BatchNorm2d(256)
-        self.conv4 = nn.Conv2d(256, 256, 1)
-        self.bn4 = nn.BatchNorm2d(256)
+        self.feature_model = torchvision.models.resnet50(pretrained=True)
+        self.P5_1 = nn.Conv2d(2048, 256, kernel_size=1)
+        self.P5_2 = nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1)
+
+        self.P4_1 = nn.Conv2d(1024, 256, kernel_size=1)
+        self.P4_2 = nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1)
+
+        self.P3_1 = nn.Conv2d(512, 256, kernel_size=1)
+        self.P3_2 = nn.Conv2d(256, 256, kernel_size=3, stride=1, padding=1)
+
+        self.P6 = nn.Conv2d(2048, 256, kernel_size=3, stride=2, padding=1)
+
+        self.P7_1 = nn.ReLU()
+        self.P7_2 = nn.Conv2d(256, 256, kernel_size=3, stride=2, padding=1)
+
     def forward(self, inputs):
-        w = inputs.shape[2]
-        h = inputs.shape[3]
-        x = self.features_model.conv1(inputs)
-        x = self.features_model.bn1(x)
-        x = self.features_model.relu(x)
-        x = self.features_model.maxpool(x)
-        c1 = self.features_model.layer1(x)
-        c2 = self.features_model.layer2(c1)
-        c3 = self.features_model.layer3(c2)
-        c4 = self.features_model.layer4(c3)
-        p1 = self.conv1(c4)
-        p1 = self.bn1(p1)
-        p1 = F.relu(p1)
-        p2 = self.conv2(c3)
-        p2 = self.bn2(p2)
-        p2 = F.relu(p2)
-        p2 = p2 + F.interpolate(p1, scale_factor=2)
-        p3 = self.conv3(c2)
-        p3 = self.bn3(p3)
-        p3 = F.relu(p3)
-        p3 = p3 + F.interpolate(p2, scale_factor=2)
-        p4 = self.conv4(c1)
-        p4 - self.bn4(p4)
-        p4 = F.relu(p4)
-        p4 = p4 + F.interpolate(p3, scale_factor=2)
-        p1 = F.interpolate(p1, size=(w, h))
-        p2 = F.interpolate(p2, size=(w, h))
-        p3 = F.interpolate(p3, size=(w, h))
-        p4 = F.interpolate(p4, size=(w, h))
-        return p1, p2, p3, p4
+        x = self.feature_model.conv1(inputs)
+        x = self.feature_model.bn1(x)
+        x = self.feature_model.relu(x)
+        x = self.feature_model.maxpool(x)
+        x = self.feature_model.layer1(x)
+        c3 = self.feature_model.layer2(x)
+        c4 = self.feature_model.layer3(c3)
+        c5 = self.feature_model.layer4(c4)
+
+        p5_1 = self.P5_1(c5)
+        p5_down = F.interpolate(p5_1, scale_factor=2)
+        p5_2 = self.P5_2(p5_1)
+
+        p4_1 = self.P4_1(c4)
+        p4_1 = p5_down + p4_1
+        p4_down = F.interpolate(p4_1, scale_factor=2)
+        p4_2 = self.P4_2(p4_1)
+
+        p3_1 = self.P3_1(c3)
+        p3_1 = p3_1 + p4_down
+        p3_2 = self.P3_2(p3_1)
+
+        p6 = self.P6(c5)
+
+        p7_1 = self.P7_1(p6)
+        p7_2 = self.P7_2(p7_1)
+
+        return p3_2, p4_2, p5_2, p6, p7_2
+
+
+
