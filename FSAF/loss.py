@@ -62,9 +62,6 @@ class AnchorBasedLoss(nn.Module):
 
             IoU_max, IoU_argmax = torch.max(IoU, dim=1) # num_anchors x 1
 
-            #import pdb
-            #pdb.set_trace()
-
             # compute the loss for classification
             targets = torch.ones(classification.shape) * -1
 
@@ -124,8 +121,8 @@ class AnchorBasedLoss(nn.Module):
 
                 targets_dx = (gt_ctr_x - anchor_ctr_x_pi) / anchor_widths_pi
                 targets_dy = (gt_ctr_y - anchor_ctr_y_pi) / anchor_heights_pi
-                targets_dw = torch.log(gt_widths / anchor_widths_pi)
-                targets_dh = torch.log(gt_heights / anchor_heights_pi)
+                targets_dw = torch.log(gt_widths + 1e-6/ anchor_widths_pi + 1e-6)
+                targets_dh = torch.log(gt_heights + 1e-6 / anchor_heights_pi + 1e-6)
 
                 targets = torch.stack((targets_dx, targets_dy, targets_dw, targets_dh))
                 targets = targets.t()
@@ -173,7 +170,7 @@ class IoULoss(nn.Module):
         area_intersection = w_intersect * h_intersect
         area_union = target_area + pred_area - area_intersection
         iou = area_intersection / area_union
-        iou = torch.clamp(iou, min=1e-6)
+        iou = torch.clamp(iou, min=1e-6, max=1-1e-6)
         loss = -torch.log(iou)
         loss = loss.mean()
         return loss
@@ -197,7 +194,7 @@ class FocalLoss(nn.Module):
             alpha_mask = alpha_mask.masked_fill(indices, self.alpha)
         else:
             alpha_mask = inputs.data.new(N, C).fill_(1)
-
+        p = torch.clamp(p, min=1e-6, max=1-1e-6)
         batch_loss = - alpha_mask * torch.pow(p, self.gamma) * torch.log(1 - p)
         loss = batch_loss.sum(dim=1)
         loss = loss.mean()

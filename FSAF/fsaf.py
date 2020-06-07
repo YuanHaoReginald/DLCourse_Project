@@ -5,6 +5,7 @@ from loss import FocalLoss, IoULoss
 from utils import trim_zeros_graph, prop_box_graph
 import numpy as np
 from branch import *
+import math
 
 def level_select(cls_pred, regr_pred, gt_boxes, feature_shapes, strides, pos_scale=0.2):
     MAX_NUM_GT_BOXES = gt_boxes.shape[0]
@@ -21,9 +22,9 @@ def level_select(cls_pred, regr_pred, gt_boxes, feature_shapes, strides, pos_sca
     total_loss = 0
     for level_id in range(len(strides)):
         stride = strides[level_id]
-        fh = feature_shapes[level_id][0].int().item()
-        fw = feature_shapes[level_id][1].int().item()
-        fa = torch.prod(feature_shapes, dim=1).int()
+        fh = math.ceil(feature_shapes[level_id][0])
+        fw = math.ceil(feature_shapes[level_id][1])
+        fa = torch.prod(torch.ceil(feature_shapes), dim=1)
         start_index = torch.sum(fa[:level_id]).int()
         start_index = start_index.item()
         end_index = start_index + fh * fw
@@ -64,6 +65,7 @@ def level_select(cls_pred, regr_pred, gt_boxes, feature_shapes, strides, pos_sca
             locs_regr_true_i /= 4.0
             loss_regr = iou_loss(locs_regr_pred_i, locs_regr_true_i)
             level_loss.append(loss_cls + loss_regr)
+            #print(loss_cls.item(), loss_regr.item())
             total_loss += (loss_cls + loss_regr)
         level_losses.append(level_loss)
     level_losses = torch.FloatTensor(level_losses)
@@ -74,7 +76,7 @@ def level_select(cls_pred, regr_pred, gt_boxes, feature_shapes, strides, pos_sca
     padding_gt_box_levels = torch.ones((MAX_NUM_GT_BOXES - num_gt_boxes), dtype=torch.int32) * -1
     gt_box_levels = torch.cat((gt_box_levels, padding_gt_box_levels))
     if total_loss != 0:
-        total_loss /= (num_gt_boxes * len(strides))
+        total_loss /= 1.0 * (num_gt_boxes * len(strides))
     return gt_box_levels, total_loss
 
 

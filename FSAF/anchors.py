@@ -55,5 +55,6 @@ class Anchors(nn.Module):
             shifted_anchors = shift(image_shapes[idx], self.strides[idx], anchors)
             shifted_anchors = np.expand_dims(shifted_anchors, axis=0)
             shifted_anchors = torch.from_numpy(shifted_anchors.astype(np.float32)).cuda()
+            #print(shifted_anchors.shape)
             all_anchors.append(shifted_anchors)
         return all_anchors

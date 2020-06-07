@@ -1,5 +1,6 @@
 import torch
 import numpy as np
+import math
 
 def clip_boxes(boxes, img):
     batch_size, num_channels, height, width = img.shape
@@ -42,15 +43,17 @@ def generate_predict_boxes(anchors, regressions, mean=None, std=None):
     return predict_boxes
 
 def anchor_free_predict_boxes(regressions, strides, image_shapes):
-    regressions = regressions.sequeeze() * 4
+    regressions = regressions.squeeze() * 4
     boxes = torch.zeros(0, 4).cuda()
     fa = torch.prod(image_shapes, dim=1)
     for idx, stride in enumerate(strides):
         image_shape = image_shapes[idx]
-        fh = image_shape[1]
-        fw = image_shape[0]
+        fh = math.ceil(image_shape[0])
+        fw = math.ceil(image_shape[1])
         start_index = torch.sum(fa[:idx])
         end_index = start_index + fh * fw
+        start_index = start_index.int()
+        end_index = end_index.int()
         regr = regressions[start_index:end_index, :]
         shift_x = (np.arange(0, image_shape[1]) + 0.5) * stride
         shift_y = (np.arange(0, image_shape[0]) + 0.5) * stride
@@ -61,12 +64,11 @@ def anchor_free_predict_boxes(regressions, strides, image_shapes):
 
         ctr_x = torch.from_numpy(ctr_x).cuda()
         ctr_y = torch.from_numpy(ctr_y).cuda()
-
         x1 = ctr_x - regr[:, 0]
         y1 = ctr_y - regr[:, 1]
         x2 = ctr_x + regr[:, 2]
         y2 = ctr_y + regr[:, 3]
-        level_box = torch.stack((x1, y1, x2, y2), dim=0).T
+        level_box = torch.stack((x1, y1, x2, y2), dim=0).T.float()
 
         boxes = torch.cat((boxes, level_box), dim = 0)
     return boxes
@@ -77,8 +79,8 @@ def trim_zeros_graph(boxes):
     return boxes, non_zeros
 
 def prop_box_graph(boxes, scale, width, height):
-    boxes_ctr_x = (boxes[:,0] + boxes[:,2]) / 2
-    boxes_ctr_y = (boxes[:,1] + boxes[:,3]) / 2
+    boxes_ctr_x = (boxes[:,0] + boxes[:,2]) / 2.0
+    boxes_ctr_y = (boxes[:,1] + boxes[:,3]) / 2.0
     boxes_width = boxes[:,2] - boxes[:,0]
     boxes_height = boxes[:,3] - boxes[:,1]
     boxes_width = boxes_width * scale
