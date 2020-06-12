@@ -4,7 +4,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 from loss import IoULoss, FocalLoss
 from util_graphs import *
-from roi_align import CropAndResize
+from detectron2.layers import ROIAlign
 
 class MetaSelectInput(nn.Module):
     def __init__(self, strides=(8, 16, 32, 64, 128), pool_size=7):
@@ -29,8 +29,9 @@ class MetaSelectInput(nn.Module):
             fm_height = torch.FloatTensor(batch_fm.size(1))
             fm_width =  torch.FloatTensor(batch_fm.size(2))
             normed_gt_boxes = normalize_boxes(gt_boxes, width=fm_width, height=fm_height, stride=stride)
-            crop_and_resize = CropAndResize(self.pool_size, self.pool_size)
-            rois = crop_and_resize(batch_fm, normed_gt_boxes, gt_boxes_batch_ids)
+            crop_and_resize = ROIAlign((self.pool_size, self.pool_size), 0.5, 1)
+            box = torch.cat((normed_gt_boxes, gt_boxes_batch_ids), dim=1)
+            rois = crop_and_resize(batch_fm, box)
             rois_from_fms.append(rois)
         rois = torch.cat(rois_from_fms, -1)
         return rois, gt_boxes_batch_ids
@@ -41,7 +42,7 @@ class MetaSelectTarget(nn.Module):
         self.strides = strides
         self.shrink_ratio = shrink_ratio
         
-    def forward(self, inputs, batch_cls_pred, batch_regr_pred, feature_shapes, batch_gt_boxes):
+    def forward(self, batch_cls_pred, batch_regr_pred, feature_shapes, batch_gt_boxes):
         feature_shapes = feature_shapes[0]
         batch_size = batch_gt_boxes.shape[0]
         batch_box_levels = []

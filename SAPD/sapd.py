@@ -1,10 +1,8 @@
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
-from utils import trim_zeros_graph, prop_box_graph
 import numpy as np
 from branch import *
-from sapd_layers import *
 
 class Net(nn.Module):
     def __init__(self, class_num=80):

@@ -7,7 +7,6 @@ from sapd import *
 from utils import *
 from torchvision.ops import nms
 from dataloader import *
-from anchors import Anchors
 from loss import *
 import os
 from pycocotools.cocoeval import COCOeval
